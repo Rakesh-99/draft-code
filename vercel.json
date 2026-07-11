@@ -13,7 +13,8 @@
     ],
     "routes": [
         { "src": "/api/(.*)", "dest": "/server/index.js" },
-        { "handle": "filesystem" },
+        { "src": "/assets/(.*)", "dest": "/assets/$1" },
+        { "src": "/(.*\\.(ico|png|jpg|jpeg|svg|gif|json|txt|webmanifest|css|js))", "dest": "/$1" },
         { "src": "/(.*)", "dest": "/index.html" }
     ]
 }
