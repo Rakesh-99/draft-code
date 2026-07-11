@@ -27,6 +27,14 @@ app.use('/api/user', userRouter);
 app.use('/api/blog', blogRouter);
 app.use('/api/comment', commentRouter);
 
+// health check route : 
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'Server is running fine!'
+    });
+});
+
 app.use(express.static(path.join(__dirname, '/client/dist')));
 
 app.get('*', (req, res) => {
