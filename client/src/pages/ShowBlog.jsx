@@ -1,160 +1,194 @@
 import axios from 'axios';
-import React, { useEffect, useState } from 'react'
-import { useSelector } from 'react-redux'
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { useParams, Link } from 'react-router-dom';
 import BlogLoader from '../assests/blogSpinner/BlogLoader';
-import { MdUpdate } from "react-icons/md";
-import { MdDateRange } from "react-icons/md";
-import { BiCategoryAlt } from "react-icons/bi";
+import { MdDateRange, MdUpdate } from 'react-icons/md';
+import { BiCategoryAlt } from 'react-icons/bi';
+import { HiArrowLeft } from 'react-icons/hi2';
 import GithubCard from '../components/GithubCard';
 import CommentCard from '../components/CommentCard';
 import RecentBlog from '../components/RecentBlog';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/atom-one-dark.css';
 
 const ShowBlog = () => {
+  const { theme } = useSelector((state) => state.themeSliceApp);
+  const isDark = theme === 'dark';
 
-    const { theme } = useSelector((state) => state.themeSliceApp);
+  const { blogSlug } = useParams();
+  const [blog, setBlog] = useState(null);
+  const [loader, setLoader] = useState(false);
+  const [limitBlogs, setLimitBlogs] = useState([]);
+  const contentRef = useRef(null);
 
-    const [slug, setSlug] = useState();
-    const { blogSlug } = useParams();
-    const [loader, setLoader] = useState(false);
-    const [limitBlogs, setLimitBlogs] = useState([]);
-
-
-
-
-    useEffect(() => {
-
-        const fetchBlogSlug = async () => {
-            try {
-                setLoader(true);
-                const fetchSlug = await axios.get(`/api/blog/get-all-blogs?slug=${blogSlug}`);
-                const response = fetchSlug;
-                setLoader(false)
-
-                if (response.status === 200) {
-                    const getSlug = response.data.blogs[0];
-                    setSlug(getSlug);
-                }
-            } catch (error) {
-                setLoader(false);
-                console.log(error.message);
-            }
+  useEffect(() => {
+    const fetchBlogSlug = async () => {
+      try {
+        setLoader(true);
+        const response = await axios.get(
+          `/api/blog/get-all-blogs?slug=${blogSlug}`
+        );
+        if (response.status === 200) {
+          setBlog(response.data.blogs[0] || null);
         }
-        fetchBlogSlug();
-    }, [blogSlug]);
+      } catch (error) {
+        console.log(error.message);
+      } finally {
+        setLoader(false);
+      }
+    };
+    fetchBlogSlug();
+    window.scrollTo(0, 0);
+  }, [blogSlug]);
 
-
-
-
-
-
-    useEffect(() => {
-
-        const getLimitBlogs = async () => {
-
-            try {
-                const getBlogs = await axios.get(`/api/blog/get-all-blogs?limit=3`);
-
-                if (getBlogs.status === 200) {
-                    setLimitBlogs(getBlogs.data.blogs)
-                }
-
-            } catch (error) {
-                console.log(error.message);
-            }
+  useEffect(() => {
+    const getLimitBlogs = async () => {
+      try {
+        const response = await axios.get(`/api/blog/get-all-blogs?limit=3`);
+        if (response.status === 200) {
+          setLimitBlogs(response.data.blogs);
         }
-        getLimitBlogs();
-    }, []);
+      } catch (error) {
+        console.log(error.message);
+      }
+    };
+    getLimitBlogs();
+  }, []);
 
+  useEffect(() => {
+    if (blog && contentRef.current) {
+      contentRef.current.querySelectorAll('pre.ql-syntax').forEach((block) => {
+        hljs.highlightElement(block);
+      });
+    }
+  }, [blog]);
 
+  if (loader) {
     return (
-        <>
-            <div className="min-h-screen">
-                {loader
-                    ?
-                    <BlogLoader />
-                    :
-                    <>
-                        {
-                            slug &&
+      <div className="min-h-screen flex items-center justify-center">
+        <BlogLoader />
+      </div>
+    );
+  }
 
-                            <div className="pt-10 lg:w-[60%] sm:w-[80%] w-[85%] md:w-[50%] m-auto">
+  if (!blog) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4">
+        <h1 className="text-2xl font-bold mb-2">Blog not found</h1>
+        <p className="opacity-60 mb-6">
+          This post may have been removed or the link is incorrect.
+        </p>
+        <Link
+          to="/"
+          className="px-5 py-2.5 rounded-full text-sm font-semibold text-white bg-indigo-500 hover:bg-indigo-600 transition-colors"
+        >
+          Back to home
+        </Link>
+      </div>
+    );
+  }
 
-                                <h1 className='text-2xl md:text-4xl font-semibold text-center hover:-translate-y-1 hover:cursor-not-allowed transition-all peer-hover:'>{slug && slug.slug}</h1>
+  const readMinutes = Math.max(1, Math.round(blog.blogBody.length / 1000));
 
-                                <div className='flex justify-center w-full my-10'>
+  return (
+    <div className="min-h-screen">
+      <article className="pt-10 w-[90%] sm:w-[85%] md:w-[70%] lg:w-[60%] max-w-3xl m-auto">
+        {/* Back link */}
+        <Link
+          to="/"
+          className={`inline-flex items-center gap-1.5 text-sm font-medium mb-8 transition-colors ${
+            isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+          }`}
+        >
+          <HiArrowLeft size={16} />
+          Back to blogs
+        </Link>
 
-                                    <p className={`${theme === 'dark' ? 'border-gray-600' : 'border-red-600'} cursor-not-allowed hover:scale-95 transition-all rounded-full py-1 flex text-orange-400 px-5 font-semibold text-sm md:text-xl items-center justify-center gap-3`}> <span><BiCategoryAlt size={20} /></span>{slug && slug.blogCategory}</p>
-                                </div>
+        {/* Category */}
+        <div className="flex justify-center mb-4">
+          <span
+            className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide px-4 py-1.5 rounded-full ${
+              isDark
+                ? 'bg-indigo-400/10 text-indigo-300'
+                : 'bg-indigo-50 text-indigo-600'
+            }`}
+          >
+            <BiCategoryAlt size={14} />
+            {blog.blogCategory}
+          </span>
+        </div>
 
-                                <div className=" flex  justify-center text-center my-10">
-                                    <img src={slug && slug.blogImgFile} className='rounded-sm object-cover' alt="blog image" />
-                                </div>
+        {/* Title */}
+        <h1 className="text-3xl md:text-5xl font-bold text-center leading-tight">
+          {blog.blogTitle}
+        </h1>
 
-                                <div className="flex justify-center">
-                                    <div className="w-full">
-                                        <div className="border-b w-full flex justify-between">
+        {/* Meta bar */}
+        <div
+          className={`flex justify-center items-center gap-6 mt-6 pb-6 mb-10 border-b text-sm ${
+            isDark ? 'border-zinc-800 text-gray-400' : 'border-gray-200 text-gray-500'
+          }`}
+        >
+          <span className="flex items-center gap-1.5">
+            <MdDateRange size={16} />
+            {new Date(blog.createdAt).toLocaleDateString(undefined, {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </span>
+          <span className={isDark ? 'text-zinc-700' : 'text-gray-300'}>•</span>
+          <span className="flex items-center gap-1.5">
+            <MdUpdate size={16} />
+            {readMinutes} min read
+          </span>
+        </div>
 
-                                            <div className='font-semibold flex items-center gap-1 md:gap-2'>
-                                                <span><MdDateRange size={20} color='orange' /></span>
-                                                <span className='text-xs md:text-lg'>{slug && new Date(slug.createdAt).toLocaleDateString()}</span>
-                                            </div>
-                                            <div className=" font-semibold flex items-center gap-1 md:gap-2">
-                                                <span><MdUpdate size={20} color='orange' /></span>
-                                                <span className='font-semibold text-xs md:text-lg'>{slug && (slug.blogBody.length / 1000).toFixed(0)}min read</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+        {/* Cover image */}
+        <div className="mb-10 rounded-xl overflow-hidden">
+          <img
+            src={blog.blogImgFile}
+            alt={blog.blogTitle}
+            className="w-full max-h-[480px] object-cover"
+          />
+        </div>
 
-                                <div className="flex w-full justify-center items-center flex-col my-10">
-                                    <div
-                                        dangerouslySetInnerHTML={{ __html: slug && slug.blogBody }}
-                                        className={`blog-content py-10  w-full max-w-[370px] text-justify md:max-w-3xl overflow-x-auto px-3 rounded-md `}>
-                                    </div>
+        {/* Body */}
+        <div
+          ref={contentRef}
+          dangerouslySetInnerHTML={{ __html: blog.blogBody }}
+          className={`blog-content leading-8 text-justify ${
+            isDark ? 'prose-invert' : ''
+          }`}
+        />
 
+        {/* GitHub */}
+        <div className="flex justify-center mt-16">
+          <GithubCard />
+        </div>
 
-                                    {/* Github Card */}
-                                    <div className="">
-                                        <GithubCard />
-                                    </div>
+        {/* Comments */}
+        <div className="mt-16">
+          <CommentCard blogId={blog._id} />
+        </div>
+      </article>
 
-                                    {/* Comment Card  */}
+      {/* Related posts */}
+      {limitBlogs.length > 0 && (
+        <section className="w-[90%] md:w-[80%] max-w-6xl m-auto mt-20 pb-20">
+          <h2 className="text-2xl font-bold text-center mb-10">
+            More from the blog
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+            {limitBlogs.map((value) => (
+              <RecentBlog key={value._id} blog={value} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+};
 
-                                    <div className="">
-                                        <CommentCard blogId={slug && slug._id} />
-                                    </div>
-
-                                    {/* Recent Blog card  */}
-
-
-                                    <h1 className='text-2xl text-center'>Recent blogs</h1>
-
-
-                                </div>
-                            </div>
-                        }
-                    </>
-                }
-
-
-
-                <div className="gap-5  justify-center grid md:grid-cols-2 lg:grid-cols-3 md:w-[80%] lg:-[70%] w-[90%] m-auto">
-                    {
-                        limitBlogs && limitBlogs.map((value, index) => {
-                            return (
-                                <div className="flex">
-                                    <RecentBlog key={index} blogs={value} />
-                                </div>
-                            )
-                        })
-
-                    }
-                </div>
-
-            </div >
-        </>
-    )
-}
-
-export default ShowBlog
+export default ShowBlog;

@@ -35,3 +35,29 @@
   word-break: break-word;
   overflow-wrap: break-word;
 }
+
+/* Code blocks — Quill wraps these as <pre class="ql-syntax"> with no <code> tag.
+   Colors now come from the highlight.js theme imported in ShowBlog.jsx;
+   this just handles spacing/shape so it fits the rest of the page. */
+.blog-content pre.ql-syntax {
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
+  white-space: pre;
+}
+
+/* Inline code, if you ever use Quill's inline code format */
+.blog-content code {
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  font-family: 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.85em;
+  font-weight: 500;
+}
