@@ -138,7 +138,7 @@ const Home = () => {
               >
                 <Link to={`/blog/${value.slug}`}>
                   <div
-                    className={`group h-full rounded-tl-2xl rounded-br-2xl border shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
+                    className={`group h-full rounded-md border  shadow-sm  transition-all duration-100 overflow-hidden ${
                       theme === 'dark' ? 'border-gray-700' : 'border-gray-300'
                     }`}
                   >
@@ -146,7 +146,7 @@ const Home = () => {
                       <img
                         src={value.blogImgFile}
                         alt={value.blogTitle}
-                        className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-500 rounded-tl-2xl"
+                        className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500 "
                       />
                     </div>
 
