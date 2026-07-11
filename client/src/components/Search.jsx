@@ -1,195 +1,268 @@
 import axios from 'axios';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import blogLoader from '../assests/blogSpinner/BlogLoader';
+import { IoMdSearch } from 'react-icons/io';
+import { HiOutlineAdjustmentsHorizontal } from 'react-icons/hi2';
+import BlogLoader from '../assests/blogSpinner/BlogLoader';
 import NodataImg from '../assests/No data.png';
 
-
-
-
-
+const categories = [
+  'uncategorized',
+  'Java',
+  'Javascript',
+  'React.Js',
+  'Git',
+  'MongoDB',
+];
 
 const Search = () => {
+  const { theme } = useSelector((state) => state.themeSliceApp);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isDark = theme === 'dark';
 
-    const { theme } = useSelector((state) => state.themeSliceApp);
-    const location = useLocation();
-    const [blogs, setBlogs] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [showMoreButton, setShowMoreButton] = useState(false);
-    const navigate = useNavigate();
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showMoreButton, setShowMoreButton] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
+  const [formData, setFormData] = useState({
+    searchblog: '',
+    sortblog: 'desc',
+    blogcategory: 'uncategorized',
+  });
 
+  const inputChangeHandle = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
 
-    const [formData, setFormData] = useState({
-        searchblog: '',
-        sortblog: 'latest',
-        blogcategory: 'uncategorized'
+  useEffect(() => {
+    const URL = new URLSearchParams(location.search);
+    const getBlog = URL.get('searchBlog');
+    const getBlogCategory = URL.get('category');
+    const sortBlog = URL.get('sort');
 
-    });
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      searchblog: getBlog || prevFormData.searchblog,
+      blogcategory: getBlogCategory || prevFormData.blogcategory,
+      sortblog: sortBlog || prevFormData.sortblog,
+    }));
 
+    const fetchBlogPosts = async () => {
+      const stringConversionURL = URL.toString();
+      try {
+        setLoading(true);
+        const response = await axios.get(
+          `/api/blog/get-all-blogs?${stringConversionURL}`
+        );
 
-    const inputChangeHandle = (e) => {
-        const { name, value } = e.target;
-        setFormData({
-            ...formData, [name]: value
-        })
-    }
-
-    useEffect(() => {
-        const URL = new URLSearchParams(location.search);
-        const getBlog = URL.get('searchBlog');
-        const getBlogCategory = URL.get('category');
-        const sortBlog = URL.get('sort');
-
-        if (getBlog || getBlogCategory || sortBlog) {
-
-            setFormData((prevFormData) => ({
-                ...prevFormData,
-                searchblog: getBlog || prevFormData.searchblog,
-                blogcategory: getBlogCategory || prevFormData.blogcategory,
-                sortblog: sortBlog || prevFormData.sortblog
-            }));
-
-
-
-
-            const fetchBlogPosts = async () => {
-                const stringConersionURL = URL.toString();
-                try {
-                    setLoading(true);
-                    const response = await axios.get(`/api/blog/get-all-blogs?${stringConersionURL}`);
-
-                    if (response.status === 200) {
-                        setLoading(false)
-                        setBlogs(response.data.blogs);
-
-                        if (response.data.blogs.length > 9) {
-                            setShowMoreButton(true)
-                        } else {
-                            setShowMoreButton(false)
-                        }
-                    }
-                } catch (error) {
-                    setLoading(false);
-                    console.log(error.message);
-                }
-            }
-            fetchBlogPosts();
+        if (response.status === 200) {
+          setBlogs(response.data.blogs);
+          setShowMoreButton(response.data.blogs.length > 9);
         }
-    }, [location.search]);
+      } catch (error) {
+        console.log(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchBlogPosts();
+  }, [location.search]);
 
-    const submitHandle = (e) => {
-        e.preventDefault();
-        const URL = new URLSearchParams(location.search);
-        URL.set('sort', formData?.sortblog);
-        URL.set('searchBlog', formData.searchblog);
-        URL.set('category', formData.blogcategory)
+  const submitHandle = (e) => {
+    e.preventDefault();
+    const URL = new URLSearchParams(location.search);
+    URL.set('sort', formData.sortblog);
+    URL.set('searchBlog', formData.searchblog);
+    URL.set('category', formData.blogcategory);
+    navigate(`/search?${URL.toString()}`);
+    setShowFilters(false);
+  };
 
+  const inputClass = `w-full py-2.5 px-4 text-sm rounded-lg border outline-none transition-all focus:ring-2 focus:ring-indigo-400/60 ${
+    isDark
+      ? 'bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500'
+      : 'bg-white border-gray-300 placeholder:text-gray-400'
+  }`;
 
-        const textUrl = URL.toString();
-        navigate(`/search?${textUrl}`)
+  const FilterForm = (
+    <form onSubmit={submitHandle} className="flex flex-col gap-5">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold uppercase tracking-wide opacity-60">
+          Search
+        </label>
+        <div className="relative">
+          <IoMdSearch
+            size={16}
+            className={`absolute left-3 top-1/2 -translate-y-1/2 ${
+              isDark ? 'text-gray-500' : 'text-gray-400'
+            }`}
+          />
+          <input
+            type="text"
+            placeholder="Search blog..."
+            className={`${inputClass} pl-9`}
+            onChange={inputChangeHandle}
+            name="searchblog"
+            value={formData.searchblog}
+          />
+        </div>
+      </div>
 
-    }
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold uppercase tracking-wide opacity-60">
+          Sort
+        </label>
+        <select
+          name="sortblog"
+          className={inputClass}
+          onChange={inputChangeHandle}
+          value={formData.sortblog}
+        >
+          <option value="desc">Latest</option>
+          <option value="asc">Oldest</option>
+        </select>
+      </div>
 
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold uppercase tracking-wide opacity-60">
+          Category
+        </label>
+        <select
+          name="blogcategory"
+          className={inputClass}
+          onChange={inputChangeHandle}
+          value={formData.blogcategory}
+        >
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
+      </div>
 
+      <button
+        type="submit"
+        className="mt-1 py-2.5 rounded-full text-sm font-semibold text-white bg-indigo-500 hover:bg-indigo-600 active:scale-[0.98] transition-all"
+      >
+        Apply Filters
+      </button>
+    </form>
+  );
 
-    return (
-        <>
-            <div className="min-h-screen md:flex-row flex-col flex">
+  return (
+    <div className="max-w-7xl mx-auto px-4 md:px-8 min-h-screen">
+      <div className="md:flex gap-10 pt-10">
+        {/* Mobile filter toggle */}
+        <div className="md:hidden flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold">Search</h1>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border ${
+              isDark ? 'border-zinc-700' : 'border-gray-300'
+            }`}
+          >
+            <HiOutlineAdjustmentsHorizontal size={16} />
+            Filters
+          </button>
+        </div>
 
-                {/* left screen  */}
-                <div className="">
-                    <form onSubmit={submitHandle} className={`border-r mt-10 shadow-sm md:w-64 w-full mb-5 md:mb-0 md:min-h-screen px-5 ${theme === 'dark' ? 'border-zinc-700' : 'border-zinc-200'}`}>
+        {/* Sidebar */}
+        <aside
+          className={`md:block ${showFilters ? 'block' : 'hidden'} md:w-72 shrink-0 mb-8 md:mb-0`}
+        >
+          <div
+            className={`md:sticky md:top-24 rounded-2xl border p-6 ${
+              isDark ? 'border-zinc-700 bg-zinc-800' : 'border-gray-200 bg-white'
+            }`}
+          >
+            <h2 className="text-lg font-bold mb-5 hidden md:block">
+              Refine Results
+            </h2>
+            {FilterForm}
+          </div>
+        </aside>
 
-                        <div className="flex flex-col ">
-
-                            <label className='text-sm font-semibold'>Search</label>
-                            <input type="text" placeholder='Search blog..' className={`  py-2 text-sm rounded-md border outline-none mt-1 px-3 ${theme === 'dark' ? 'bg-gray-700 border-gray-500 focus:bg-gray-600' : 'bg-white border-gray-400 focus:bg-gray-50'}`} onChange={inputChangeHandle} name='searchblog' value={formData.searchblog} />
-
-
-                            <label className='text-sm font-semibold mt-2 mb-1' >Sort</label>
-
-                            <select
-                                name="sortblog"
-
-                                className={`px-5 py-2 border  rounded-md text-sm outline-none  ${theme === 'dark' ? 'bg-gray-700 border-gray-500 focus:bg-gray-600' : 'bg-white focus:bg-gray-50 border-gray-400'}`}
-
-                                onChange={inputChangeHandle}
-                                value={formData.sortblog}>
-                                <option value="decs">Lastest</option>
-                                <option value="asc">Oldest</option>
-                            </select>
-
-                            <label className='text-sm font-semibold mt-2 mb-1'>Category</label>
-                            <select
-                                name="blogcategory"
-
-                                className={`px-5  py-2 rounded-md text-sm outline-none ${theme === 'dark' ? 'bg-gray-700 focus:bg-gray-600 border-gray-500' : 'bg-white border-gray-400 focus:bg-gray-50'}`}
-                                onChange={inputChangeHandle}
-                                value={formData.blogcategory} >
-
-                                <option value="" disabled>Select category</option>
-                                <option value="uncategorized">uncategorized</option>
-                                <option value="Java">Java</option>
-                                <option value="Javascript">JavaScript</option>
-                                <option value="React.Js">React Js</option>
-                                <option value="Git">Git</option>
-                                <option value="MongoDB">MongoDB</option>
-                            </select>
-                        </div>
-
-                        <div className="text-center mt-3">
-                            <button type='submit' className='py-2 text-xs w-full rounded-sm  px-5 bg-gradient-to-r from-indigo-400 to-violet-500 text-white font-semibold'>Apply filters</button>
-                        </div>
-                    </form>
-                </div>
-
-
-                {/* right  screen*/}
-
-                {
-                    loading === true ? <blogLoader /> :
-
-                        <div className="flex flex-wrap px-5 w-full my-10 gap-4 justify-center">
-
-
-                            {
-                                blogs.length > 0
-
-                                    ?
-
-                                    blogs && blogs.map((value, index) => {
-                                        return (
-                                            <div
-                                                key={index}
-                                                className={`shadow-md border hover:scale-[99%] duration-300 transition-all w-96 rounded-tl-xl rounded-br-xl pb-5 cursor-pointer ${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'}`}>
-
-                                                <Link to={`/blog/${value?.slug}`}>
-                                                    <img src={value?.blogImgFile} className='duration-300 hover:scale-[99%] transition-all w-96 h-60 rounded-tl-xl rounded-br-xl' />
-
-                                                    <div className="px-3">
-                                                        <p className='text-lg md:text-xl'>{value?.blogTitle}</p>
-                                                        <span className='text-xs md:text-sm w-20 text-center border px-4 rounded-full'>{value?.blogCategory}</span>
-                                                    </div>
-                                                </Link>
-                                            </div>
-                                        )
-                                    })
-                                    :
-
-                                    <div className="w-full flex  flex-col items-center">
-                                        <img src={NodataImg} className='w-96' />
-                                        <h1 className='text-xl  font-bold'>Oops ! No blogs found</h1>
-                                    </div>
-                            }
-                        </div>
-                }
-
+        {/* Results — min-w-0 is the fix: without it, the grid forces this
+            flex child wider than the available space and overflows the viewport */}
+        <div className="flex-1 min-w-0 pb-16">
+          {loading ? (
+            <div className="flex justify-center items-center py-24">
+              <BlogLoader />
             </div>
-        </>
-    )
-}
+          ) : blogs.length > 0 ? (
+            <>
+              <p className="text-sm opacity-60 mb-6">
+                {blogs.length} result{blogs.length !== 1 ? 's' : ''} found
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {blogs.map((value, index) => (
+                  <Link key={value._id || index} to={`/blog/${value?.slug}`}>
+                    <div
+                      className={`group h-full rounded-xl border shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden ${
+                        isDark
+                          ? 'border-zinc-700 bg-zinc-900'
+                          : 'border-gray-200 bg-white'
+                      }`}
+                    >
+                      <div className="overflow-hidden aspect-[16/10]">
+                        <img
+                          src={value?.blogImgFile}
+                          alt={value?.blogTitle}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                      <div className="p-5 flex flex-col gap-3">
+                        <span
+                          className={`text-[11px] w-fit font-semibold uppercase tracking-wide px-3 py-1 rounded-full ${
+                            isDark
+                              ? 'bg-indigo-400/10 text-indigo-300'
+                              : 'bg-indigo-50 text-indigo-600'
+                          }`}
+                        >
+                          {value?.blogCategory}
+                        </span>
+                        <p className="text-base font-semibold leading-snug line-clamp-2 group-hover:text-indigo-400 transition-colors">
+                          {value?.blogTitle}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {showMoreButton && (
+                <div className="flex justify-center mt-10">
+                  <button
+                    className={`px-6 py-2.5 rounded-full text-sm font-semibold border transition-colors ${
+                      isDark
+                        ? 'border-zinc-700 hover:bg-zinc-800'
+                        : 'border-gray-300 hover:bg-gray-100'
+                    }`}
+                  >
+                    Load More
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="w-full flex flex-col items-center py-16 text-center">
+              <img src={NodataImg} className="w-72 md:w-96 mb-4" alt="No results" />
+              <h1 className="text-xl font-bold">Oops! No blogs found</h1>
+              <p className="text-sm opacity-60 mt-1">
+                Try adjusting your search or filters.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default Search;
