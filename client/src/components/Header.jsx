@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { CgUserlane } from "react-icons/cg";
 import { RxHamburgerMenu } from "react-icons/rx";
 import { AiOutlineClose } from "react-icons/ai";
 import { LuSunMedium } from "react-icons/lu";
@@ -13,312 +12,313 @@ import axios from 'axios';
 import { CgProfile } from "react-icons/cg";
 import { PiSignOutDuotone } from "react-icons/pi";
 import { MdOutlineKeyboardDoubleArrowRight } from "react-icons/md";
-import { motion } from 'framer-motion';
-import Search from './Search';
-
-
-
-
+import { AnimatePresence, motion } from 'framer-motion';
 
 const Header = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-    const [showSearchComponent, setShowSearchComponent] = useState(false)
-    const location = useLocation();
-    const [toggleTheme, setToggleTheme] = useState(false);
-    const [toggleNavBtn, setToggleNavBtn] = useState(false);
-    const { user } = useSelector((state) => state.userSliceApp);
-    const [dropDown, setDropDown] = useState(false);
-    const dispatch = useDispatch();
-    const { theme } = useSelector((state) => state.themeSliceApp);
-    const navigate = useNavigate();
-    const [searchBlog, setSearchBlog] = useState('');
+  const { user } = useSelector((state) => state.userSliceApp);
+  const { theme } = useSelector((state) => state.themeSliceApp);
 
+  const [toggleNavBtn, setToggleNavBtn] = useState(false);
+  const [dropDown, setDropDown] = useState(false);
+  const [searchBlog, setSearchBlog] = useState('');
 
+  const dropDownRef = useRef(null);
+  const isDark = theme === 'dark';
 
+  const themeToggle = () => {
+    dispatch(changeTheme());
+  };
 
-
-
-
-
-
-
-
-    const themeToggle = () => {
-        setToggleTheme(!toggleTheme);
-        dispatch(changeTheme());
+  const signOutHandle = async () => {
+    try {
+      const signOutUser = await axios.post(`/api/user/signoutuser`);
+      if (signOutUser.data.success === true) {
+        dispatch(signOutSuccess());
+      }
+    } catch (error) {
+      dispatch(signOutUserFailure(error));
     }
+  };
 
+  const submitHandle = (e) => {
+    e.preventDefault();
+    const getURL = new URLSearchParams(location.search);
+    getURL.set('searchBlog', searchBlog);
+    navigate(`/search?${getURL.toString()}`);
+  };
 
-    // SignOut user Api : 
+  useEffect(() => {
+    const getURL = new URLSearchParams(location.search);
+    const getData = getURL.get('searchBlog');
+    if (getData) setSearchBlog(getData);
+  }, [location.search]);
 
-    const signOutHandle = async () => {
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropDownRef.current && !dropDownRef.current.contains(e.target)) {
+        setDropDown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-        try {
+  // Close menus on route change
+  useEffect(() => {
+    setDropDown(false);
+    setToggleNavBtn(false);
+  }, [location.pathname]);
 
-            const signOutUser = await axios.post(`/api/user/signoutuser`)
+  const navLinkClass = (path) =>
+    `relative font-medium text-sm transition-colors ${
+      location.pathname === path
+        ? 'text-indigo-500'
+        : isDark
+        ? 'text-gray-300 hover:text-white'
+        : 'text-gray-600 hover:text-gray-900'
+    }`;
 
-            if (signOutUser.data.success === true) {
-                dispatch(signOutSuccess());
-            }
+  return (
+    <nav
+      className={`sticky top-0 z-30 backdrop-blur-md border-b transition-colors ${
+        isDark
+          ? 'bg-zinc-900/80 border-zinc-800'
+          : 'bg-white/80 border-gray-200'
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-6">
+        {/* Logo */}
+        <NavLink to="/" className="flex items-center shrink-0 group">
+          <span className={`text-lg font-bold ${isDark ? 'text-white' : 'text-zinc-900'}`}>
+            Draft
+          </span>
+          <span className="text-lg font-bold px-2 py-0.5 ml-0.5 rounded-md text-white bg-gradient-to-r from-indigo-500 to-blue-500 group-hover:from-pink-500 group-hover:to-yellow-500 transition-all duration-300">
+            code
+          </span>
+        </NavLink>
 
-        } catch (error) {
-            signOutUserFailure(error);
-        }
+        {/* Desktop nav links */}
+        <div className="hidden md:flex items-center gap-8">
+          <NavLink to="/about" className={navLinkClass('/about')}>
+            About
+            {location.pathname === '/about' && (
+              <motion.span
+                layoutId="nav-underline"
+                className="absolute -bottom-2 left-0 right-0 h-0.5 bg-indigo-500 rounded-full"
+              />
+            )}
+          </NavLink>
+        </div>
 
+        {/* Desktop search */}
+        <form
+          onSubmit={submitHandle}
+          className="hidden md:flex items-center relative flex-1 max-w-xs"
+        >
+          <IoMdSearch
+            size={18}
+            className={`absolute left-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
+          />
+          <input
+            value={searchBlog}
+            onChange={(e) => setSearchBlog(e.target.value)}
+            type="text"
+            placeholder="Search articles..."
+            className={`w-full text-sm pl-9 pr-3 py-2 rounded-full border outline-none transition-all focus:ring-2 focus:ring-indigo-400 ${
+              isDark
+                ? 'bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500'
+                : 'bg-gray-100 border-transparent placeholder:text-gray-400'
+            }`}
+          />
+        </form>
 
-    }
+        {/* Right controls (desktop) */}
+        <div className="hidden md:flex items-center gap-3 shrink-0">
+          <button
+            onClick={themeToggle}
+            aria-label="Toggle theme"
+            className={`p-2 rounded-full transition-colors ${
+              isDark ? 'hover:bg-zinc-800 text-yellow-300' : 'hover:bg-gray-100 text-orange-400'
+            }`}
+          >
+            {isDark ? <LuSunMedium size={20} /> : <HiMoon size={20} />}
+          </button>
 
+          {user ? (
+            <div className="relative" ref={dropDownRef}>
+              <button onClick={() => setDropDown(!dropDown)} className="block">
+                <img
+                  src={user.profilePicture}
+                  alt="Profile"
+                  className="w-9 h-9 rounded-full object-cover ring-2 ring-transparent hover:ring-indigo-400 transition-all"
+                />
+              </button>
 
-    const submitHandle = (e) => {
-        e.preventDefault();
-        const getURL = new URLSearchParams(location.search);
-        getURL.set('searchBlog', searchBlog);
-        const stringConversion = getURL.toString();
-        navigate(`/search?${stringConversion}`);
-    }
-
-
-    useEffect(() => {
-        const getURL = new URLSearchParams(location.search);
-        const getData = getURL.get('searchBlog');
-        if (getData) {
-            setSearchBlog(getData);
-        }
-    }, [location.search]);
-
-
-
-
-
-
-    const mobileSearchHandle = () => {
-        navigate('/search');
-    }
-
-
-
-
-    return (
-
-        <>
-            <nav className={`z-20 sticky top-0 border-b shadow-sm md:px-10 px-2 py-2 ${theme === 'dark' ? 'bg-zinc-800 border-gray-700' : 'bg-blue-100 border-gray-300'} `}>
-                {/* For larger screen devices : */}
-
-                <div className='md:flex hidden justify-between z-20'>
-
-
-
-
-                    <NavLink className=" flex items-center cursor-pointer" to={'/'}>
-                        <motion.h1 className='text-lg font-bold'
-                            initial={{ y1: 1000 }}
-                            animate={{ y: [-20, 0] }}
-                            transition={{
-                                duration: 1,
-                                delay: 0
-                            }}
-                        >Draft</motion.h1>
-                        <motion.h1 className='text-xl font-bold px-2  text-white rounded-md bg-gradient-to-r from-blue-400 via-blue-500 to-blue-000 '
-                        >code</motion.h1>
+              <AnimatePresence>
+                {dropDown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                    className={`absolute right-0 mt-3 w-44 rounded-xl border shadow-lg overflow-hidden ${
+                      isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <NavLink
+                      to="/dashboard?tab=profile"
+                      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                        isDark ? 'hover:bg-zinc-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      <CgProfile size={18} />
+                      Profile
                     </NavLink>
-
-                    <div className="flex gap-5 font-semibold">
-
-
-
-                        <div className="flex gap-1 text-sm items-center">
-                            <span><CgUserlane size={20} className={`${location.pathname === '/about' && 'text-blue-00'}`} /></span>
-                            <NavLink className={` ${location.pathname === '/about' && 'border-b-2 border-blue-600 text-blue-400'}`} to={'/about'}>
-                                <motion.p
-                                    initial={{ y1: 1000 }}
-                                    animate={{ y: [-20, 0] }}
-                                    transition={{
-                                        duration: 1,
-                                        delay: 0
-                                    }}>About
-                                </motion.p>
-                            </NavLink>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center relative">
-
-                        <form action="" onSubmit={submitHandle}>
-                            <input value={searchBlog} onChange={(e) => setSearchBlog(e.target.value)} type="text" name='' placeholder='Search...' className={`transition-all focus:bg-blue-50 py-2 px-4 outline-none rounded-md border border-gray-500  ${theme === 'dark' && ' transition-all focus:bg-gray-600  bg-gray-700'}`} />
-                        </form>
-
-
-
-                        <IoMdSearch size={19} color='gray' className='absolute right-2' />
-                    </div>
-
-                    <div className="flex items-center cursor-pointer rounded-full px-2" onClick={themeToggle}>
-
-                        <span className=''>
-                            {
-                                toggleTheme
-                                    ?
-                                    <HiMoon size={28} className='active:animate-spin transition-all rounded-full py-1 px-1' />
-                                    : <LuSunMedium size={28} className='active:animate-spin ' />
-                            }
-                        </span>
-                    </div>
-
-                    {
-                        user ?
-                            <div className=" cursor-pointer relative" onClick={() => setDropDown(!dropDown)}>
-                                <img src={user && user.profilePicture} className='md:w-11 md:h-11 rounded-full' />
-
-                                {/* Dropdown Menu  */}
-
-                                {
-                                    dropDown &&
-
-                                    <div className={`absolute border  z-10 flex transition-all flex-col gap-2 text-center w-36  rounded-md px-2 py-2 right-5 ${theme === 'dark' ? 'bg-zinc-700 ' : 'bg-white border-2'}`}>
-
-
-                                        <div className="flex items-center justify-center">
-
-                                            <CgProfile size={20} />
-
-                                            <NavLink to={'/dashboard?tab=profile'} className={` transition-all py-2 px-3 rounded-md text-sm font-semibold hover:${theme === 'dark' ? 'bg-gray-600  text-white' : 'bg-gray-300 text-black'}`}>Profile</NavLink>
-                                        </div>
-
-                                        <hr />
-
-                                        <div className="flex  justify-center items-center">
-                                            <PiSignOutDuotone size={20} />
-                                            <button className={`transition-all px-5 rounded-md py-2 text-sm font-semibold hover:${theme === 'dark' ? 'bg-gray-600  text-white' : 'bg-gray-300 text-black'}`} onClick={() => signOutHandle()}>SignOut</button>
-                                        </div>
-
-
-                                    </div>
-                                }
-
-                            </div>
-                            :
-                            <div className="">
-                                {location.pathname === `/login` || location.pathname === `/register` ? <></> :
-                                    <NavLink to={'/login'} className='active:scale-95 transition-all flex items-center gap-1 bg-blue-600 font-semibold rounded-md px-2 py-2 text-white hover:bg-blue-700 active:bg-blue-800'>
-                                        <span>Get started</span>
-                                        <span><MdOutlineKeyboardDoubleArrowRight size={20} /></span>
-                                    </NavLink>
-                                }
-                            </div>
-                    }
-                </div>
-
-                {/* For smaller screen devices : */}
-
-                <div className="md:hidden py-1 flex items-center justify-around ">
-
-                    <div className="">
-                        <NavLink className="flex items-center  cursor-pointer" to={'/'}>
-                            <motion.h1 className='text-base font-bold'
-
-                                initial={{ y1: 1000 }}
-                                animate={{ y: [-20, 0] }}
-                                transition={{
-                                    duration: 1,
-                                    delay: 0
-                                }}>
-
-
-                                Draft</motion.h1>
-                            <span className='text-xl font-semibold  px-2 text-white rounded-md bg-gradient-to-r from-blue-400 via-blue-600 to-blue-000 hover:from-pink-500 hover:to-yellow-500'>code</span>
-                        </NavLink>
-                    </div>
-
-
-                    <button className="flex items-center">
-                        <IoMdSearch size={25} className='active:scale-90 active:text-blue-600 transition-all' onClick={mobileSearchHandle} />
+                    <div className={`h-px ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
+                    <button
+                      onClick={signOutHandle}
+                      className={`w-full flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                        isDark ? 'hover:bg-zinc-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      <PiSignOutDuotone size={18} />
+                      Sign Out
                     </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            location.pathname !== '/login' &&
+            location.pathname !== '/register' && (
+              <NavLink
+                to="/login"
+                className="flex items-center gap-1 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white font-semibold text-sm rounded-full pl-4 pr-3 py-2 transition-all active:scale-95"
+              >
+                Get started
+                <MdOutlineKeyboardDoubleArrowRight size={18} />
+              </NavLink>
+            )
+          )}
+        </div>
 
-                    <div className="flex items-center cursor-pointer rounded-full " onClick={themeToggle}>
+        {/* Mobile controls */}
+        <div className="md:hidden flex items-center gap-1">
+          <button
+            onClick={() => navigate('/search')}
+            className={`p-2 rounded-full ${isDark ? 'active:bg-zinc-800' : 'active:bg-gray-100'}`}
+          >
+            <IoMdSearch size={22} />
+          </button>
 
-                        <span >{toggleTheme ? <HiMoon size={26} className='active:animate-spin' /> : <LuSunMedium size={26} className='active:animate-spin' />}</span>
-                    </div>
+          <button
+            onClick={themeToggle}
+            className={`p-2 rounded-full ${
+              isDark ? 'active:bg-zinc-800 text-yellow-300' : 'active:bg-gray-100 text-orange-400'
+            }`}
+          >
+            {isDark ? <LuSunMedium size={20} /> : <HiMoon size={20} />}
+          </button>
 
+          {user && (
+            <div className="relative" ref={dropDownRef}>
+              <button onClick={() => setDropDown(!dropDown)}>
+                <img
+                  src={user.profilePicture}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              </button>
 
-                    {
-                        user &&
-                        <div className=" cursor-pointer relative" onClick={() => setDropDown(!dropDown)}>
-                            <img src={user && user.profilePicture} className='w-9 h-9 rounded-full' />
+              <AnimatePresence>
+                {dropDown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.15 }}
+                    className={`absolute right-0 mt-3 w-40 rounded-xl border shadow-lg overflow-hidden ${
+                      isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <NavLink
+                      to="/dashboard?tab=profile"
+                      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium ${
+                        isDark ? 'hover:bg-zinc-700' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      <CgProfile size={16} />
+                      Profile
+                    </NavLink>
+                    <div className={`h-px ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
+                    <button
+                      onClick={signOutHandle}
+                      className={`w-full flex items-center gap-2 px-4 py-3 text-sm font-medium ${
+                        isDark ? 'hover:bg-zinc-700' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      <PiSignOutDuotone size={16} />
+                      Sign Out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
-                            {/* Dropdown Menu  */}
+          <button
+            onClick={() => setToggleNavBtn(!toggleNavBtn)}
+            className={`p-2 rounded-full ${isDark ? 'active:bg-zinc-800' : 'active:bg-gray-100'}`}
+          >
+            {toggleNavBtn ? <AiOutlineClose size={20} /> : <RxHamburgerMenu size={20} />}
+          </button>
+        </div>
+      </div>
 
-                            {
-                                dropDown &&
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {toggleNavBtn && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className={`md:hidden overflow-hidden border-t ${
+              isDark ? 'border-zinc-800' : 'border-gray-200'
+            }`}
+          >
+            <div className="flex flex-col items-center gap-4 py-6">
+              <NavLink
+                to="/about"
+                onClick={() => setToggleNavBtn(false)}
+                className={navLinkClass('/about')}
+              >
+                About me
+              </NavLink>
 
-                                <div className={`absolute border  z-10 flex transition-all flex-col w-36 gap-1 text-center  rounded-md px-4 py-4 right-0 top-14 ${theme === 'dark' ? 'bg-zinc-800' : 'bg-slate-200 border border-gray-400'}`}>
+              {!user &&
+                location.pathname !== '/login' &&
+                location.pathname !== '/register' && (
+                  <NavLink
+                    to="/login"
+                    onClick={() => setToggleNavBtn(false)}
+                    className="flex items-center gap-1 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-sm rounded-full pl-4 pr-3 py-2 transition-all active:scale-95"
+                  >
+                    Get started
+                    <MdOutlineKeyboardDoubleArrowRight size={18} />
+                  </NavLink>
+                )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
+  );
+};
 
-
-
-                                    <div className={`flex gap-2 py-2 items-center transition-all  px-2 rounded-md ${theme === 'dark' ? 'hover:bg-gray-600' : 'hover:bg-gray-400 hover:text-white'}`}>
-
-                                        <CgProfile size={20} />
-
-                                        <NavLink className={`transition-all `} to={'/dashboard?tab=profile'}>Profile</NavLink>
-                                    </div>
-
-                                    <hr />
-
-                                    <div className={`flex gap-2 py-2 px-2 items-center transition-all rounded-md ${theme === 'dark' ? 'hover:bg-gray-600' : 'hover:bg-gray-400 hover:text-white'}`}>
-                                        <PiSignOutDuotone size={20} />
-                                        <button className='text-sm transition-all ' onClick={() => signOutHandle()}>SignOut</button>
-                                    </div>
-
-
-                                </div>
-                            }
-
-                        </div>
-                    }
-
-                    <div className=' cursor-pointer transition-all'>
-                        <span className=" h-6 flex items-center  transition-all" onClick={() => setToggleNavBtn(!toggleNavBtn)}>
-                            {
-                                toggleNavBtn ? <AiOutlineClose size={20} className='active:animate-ping transition-all' /> : <RxHamburgerMenu size={20} className='active:animate-ping transition-all' />
-                            }
-                        </span>
-                    </div>
-
-
-
-                </div>
-
-                {
-                    toggleNavBtn &&
-
-                    <div className=" md:hidden flex flex-col justify-center w-full items-center py-10 gap-5">
-
-                        <div className="flex items-center gap-1">
-                            <span><CgUserlane size={20} className={`${location.pathname === '/about' && 'text-blue-600'}`} /></span>
-                            <NavLink to={'/about'} className={`${location.pathname === '/about' && 'border-b-2 border-blue-600 text-blue-600'}`} onClick={() => setToggleNavBtn(!toggleNavBtn)}>About me</NavLink>
-                        </div>
-
-                        {!user &&
-
-                            <div className="flex items-center justify-center" onClick={() => setToggleNavBtn(!toggleNavBtn)}>
-                                {location.pathname === `/login` || location.pathname === `/register` ? <></> :
-                                    <NavLink to={'/login'} className='active:scale-95 transition-all flex items-center gap-1 bg-blue-600 font-semibold rounded-md px-2 py-2 text-white hover:bg-blue-700 active:bg-blue-800'>
-                                        <span>Get started</span>
-                                        <span><MdOutlineKeyboardDoubleArrowRight size={20} /></span>
-                                    </NavLink>
-                                }
-                            </div>
-                        }
-
-
-                    </div>
-                }
-
-            </nav >
-
-            {
-                showSearchComponent && <Search />
-            }
-        </>
-    )
-}
 export default Header;
