@@ -18,6 +18,7 @@ import CreateBlog from './pages/CreateBlog';
 import UpdateBlog from './pages/UpdateBlog';
 import ShowBlog from './pages/ShowBlog';
 import ForgetPassword from './pages/ForgetPassword';
+import ErrorBoundary from './components/ErrorBoundary';
 import ScrollToTop from './components/ScrollToTop';
 import Search from './components/Search';
 
@@ -34,6 +35,7 @@ const App = () => {
                         <ScrollToTop />
                         <ThemeProvider>
                             <Header />
+                            <ErrorBoundary>
                             <Routes>
                                 <Route path='/' element={<Home />} />
                                 <Route path='/about' element={<About />} />
@@ -53,6 +55,7 @@ const App = () => {
                                 </Route>
 
                             </Routes>
+                            </ErrorBoundary>
                             <Footer />
                         </ThemeProvider>
                     </BrowserRouter>
