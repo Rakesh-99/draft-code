@@ -52,6 +52,14 @@
 }
 
 /* Inline code, if you ever use Quill's inline code format */
+.blog-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+  display: block;
+}
+
 .blog-content code {
   background: rgba(99, 102, 241, 0.12);
   color: #818cf8;

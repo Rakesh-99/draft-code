@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -32,6 +32,76 @@ const CreateBlog = () => {
     });
 
     const [imageLoader, setImageLoader] = useState(false);
+    const quillRef = useRef(null);
+
+    const imageHandler = useCallback(() => {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/*');
+        input.click();
+
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
+
+            const quill = quillRef.current?.getEditor();
+            const range = quill?.getSelection(true);
+
+            try {
+                const uniqueImageId = `inline_image_${Date.now().toString()}`;
+                const imageRef = ref(firebaseStorage, `blogImages/${uniqueImageId}`);
+
+                toast.loading('Uploading image...', { id: 'inline-img-upload' });
+
+                const upload = await uploadBytes(imageRef, file);
+                const imageUrl = await getDownloadURL(upload.ref);
+
+                quill.insertEmbed(range?.index ?? 0, 'image', imageUrl);
+                quill.setSelection((range?.index ?? 0) + 1);
+
+                toast.success('Image inserted', { id: 'inline-img-upload' });
+            } catch (error) {
+                toast.error('Failed to upload image', { id: 'inline-img-upload' });
+                console.log(error.message);
+            }
+        };
+    }, []);
+
+    const quillModules = useMemo(
+        () => ({
+            toolbar: {
+                container: [
+                    [{ header: [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['link', 'image'],
+                    ['clean'],
+                ],
+                handlers: {
+                    image: imageHandler,
+                },
+            },
+        }),
+        [imageHandler]
+    );
+
+    const quillFormats = useMemo(
+        () => [
+            'header',
+            'bold',
+            'italic',
+            'underline',
+            'strike',
+            'blockquote',
+            'code-block',
+            'list',
+            'bullet',
+            'link',
+            'image',
+        ],
+        []
+    );
 
 
 
@@ -196,7 +266,14 @@ const CreateBlog = () => {
                     </div>
 
                     <div className="my-5">
-                        <ReactQuill className='h-72 ' onChange={reactQuillChange} />
+                        <ReactQuill
+                            ref={quillRef}
+                            className='h-72'
+                            onChange={reactQuillChange}
+                            modules={quillModules}
+                            formats={quillFormats}
+                            placeholder='Write your blog content here...'
+                        />
                     </div>
 
                     <button type='submit' className='bg-gray-700 text-white font-semibold active:bg-gray-800 py-2 rounded-md my-5' onClick={publishBlogBtn}>Publish Blog</button>
